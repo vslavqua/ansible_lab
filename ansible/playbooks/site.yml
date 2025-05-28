@@ -1,0 +1,8 @@
+- name: Примерный плейбук
+  hosts: all
+  become: true
+  tasks:
+    - name: Убедиться, что curl установлен
+      ansible.builtin.package:
+        name: curl
+        state: present

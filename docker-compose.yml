@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  hostname1:
+    build: ./aaa
+    container_name: hostname1
+    networks:
+      dc_aaa:
+        ipv4_address: 172.20.10.11
+
+  hostname4:
+    build: ./aaa
+    container_name: hostname4
+    networks:
+      dc_aaa:
+        ipv4_address: 172.20.10.14
+
+  hostname2:
+    build: ./zzz
+    container_name: hostname2
+    networks:
+      dc_zzz:
+        ipv4_address: 172.20.20.12
+
+  hostname3:
+    build: ./zzz
+    container_name: hostname3
+    networks:
+      dc_zzz:
+        ipv4_address: 172.20.20.13
+
+  hostname5:
+    build: ./zzz
+    container_name: hostname5
+    networks:
+      dc_zzz:
+        ipv4_address: 172.20.20.15
+
+networks:
+  dc_aaa:
+    ipam:
+      config:
+        - subnet: ${DC_AAA_SUBNET}
+
+  dc_zzz:
+    ipam:
+      config:
+        - subnet: ${DC_ZZZ_SUBNET}

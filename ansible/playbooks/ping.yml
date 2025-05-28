@@ -1,0 +1,7 @@
+- name: Ping dbservers to check connectivity
+  hosts: stage_tr,chservers
+  gather_facts: no
+
+  tasks:
+    - name: Ping the host
+      ansible.builtin.ping:

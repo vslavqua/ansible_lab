@@ -1,0 +1,16 @@
+- name: Check ClickHouse version installed
+  hosts: chservers
+  vars_files:
+    - vault.yml
+  gather_facts: no
+  become: true  # Optional: if ClickHouse requires root/sudo to run
+
+  tasks:
+    - name: Get ClickHouse version
+      ansible.builtin.command: clickhouse-client --version
+      register: clickhouse_version
+      ignore_errors: yes  # In case ClickHouse is not installed
+
+    - name: Show ClickHouse version
+      ansible.builtin.debug:
+        msg: "ClickHouse version on {{ inventory_hostname }}: {{ clickhouse_version.stdout | default('Not installed') }}"

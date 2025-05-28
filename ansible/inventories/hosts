@@ -1,0 +1,11 @@
+[dc_aaa]
+hostname1 ansible_host=172.20.10.11 ansible_user=ansible ansible_password=ansible
+hostname4 ansible_host=172.20.10.14 ansible_user=ansible ansible_password=ansible
+
+[dc_zzz]
+hostname2 ansible_host=172.20.20.12 ansible_user=ansible ansible_password=ansible
+hostname3 ansible_host=172.20.20.13 ansible_user=ansible ansible_password=ansible
+hostname5 ansible_host=172.20.20.15 ansible_user=ansible ansible_password=ansible
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
