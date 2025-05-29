@@ -1,0 +1,22 @@
+- name: Create sudo user
+  hosts: all
+  become: true
+
+  vars:
+    username: deploy
+    password: "{{ 'SuperSecret123' | password_hash('sha512') }}"
+
+  tasks:
+    - name: Create user
+      ansible.builtin.user:
+        name: "{{ username }}"
+        shell: /bin/bash
+        password: "{{ password }}"
+        groups: sudo
+        append: yes
+
+    - name: Ensure sudo access without password
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ username }}"
+        content: "{{ username }} ALL=(ALL) NOPASSWD:ALL\n"
+        mode: '0440'

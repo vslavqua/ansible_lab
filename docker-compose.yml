@@ -1,48 +1,191 @@
-version: "3.9"
+version: '3.9'
 
 services:
+  # --- Linux Hosts (5) ---
   hostname1:
-    build: ./aaa
+    image: debian:bullseye
+    platform: linux/arm64
     container_name: hostname1
+    hostname: hostname1
     networks:
-      dc_aaa:
-        ipv4_address: 172.20.10.11
+      - dc-aaa.lv
+      - zabbix_net
+    privileged: true
+    command: sleep infinity    
 
   hostname4:
-    build: ./aaa
+    image: debian:bullseye
+    platform: linux/arm64
     container_name: hostname4
+    hostname: hostname4
     networks:
-      dc_aaa:
-        ipv4_address: 172.20.10.14
+      - dc-aaa.lv
+      - zabbix_net
+    privileged: true
+    command: sleep infinity
 
   hostname2:
-    build: ./zzz
+    image: debian:bullseye
+    platform: linux/arm64
     container_name: hostname2
+    hostname: hostname2
     networks:
-      dc_zzz:
-        ipv4_address: 172.20.20.12
+      - dc-zzz.lv
+      - zabbix_net
+    privileged: true
+    command: sleep infinity
 
   hostname3:
-    build: ./zzz
+    image: debian:bullseye
+    platform: linux/arm64
     container_name: hostname3
+    hostname: hostname3
     networks:
-      dc_zzz:
-        ipv4_address: 172.20.20.13
+      - dc-zzz.lv
+      - zabbix_net
+    privileged: true
+    command: sleep infinity
 
   hostname5:
-    build: ./zzz
+    image: debian:bullseye
+    platform: linux/arm64
     container_name: hostname5
+    hostname: hostname5
     networks:
-      dc_zzz:
-        ipv4_address: 172.20.20.15
+      - dc-zzz.lv
+      - zabbix_net
+    privileged: true
+    command: sleep infinity
+
+  # --- NTP Servers ---
+  ntp-aaa:
+    build:
+      context: ./ntp
+      args:
+        DC_NAME: aaa
+    container_name: ntp-aaa
+    hostname: ntp-aaa
+    networks:
+      - dc-aaa.lv
+    # ports:
+    #   - "123:123/udp"
+    cap_add:
+      - SYS_TIME
+
+  ntp-zzz:
+    build:
+      context: ./ntp
+      args:
+        DC_NAME: zzz
+    container_name: ntp-zzz
+    hostname: ntp-zzz
+    networks:
+      - dc-zzz.lv
+    # ports:
+    #   - "124:123/udp"
+    cap_add:
+      - SYS_TIME
+
+  # --- Ansible Controller ---
+  ansible:
+    image: debian:bullseye
+    platform: linux/arm64
+    container_name: ansible
+    hostname: ansible
+    networks:
+      - dc-aaa.lv
+      - dc-zzz.lv
+      - zabbix_net
+    volumes:
+      - ./ansible:/ansible
+    working_dir: /ansible
+    tty: true
+    command: sleep infinity
+
+  # --- Zabbix Database ---
+  zabbix_db:
+    image: mariadb:10.5
+    platform: linux/arm64
+    container_name: zabbix_db
+    environment:
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: zabbix
+    # command:
+    #   - mariadbd
+    #   - --character-set-server=utf8mb4
+    #   - --collation-server=utf8mb4_bin
+    #   - --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uzabbix", "-pzabbix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - zabbix_db_data:/var/lib/mysql
+    networks:
+      # - dc-aaa.lv
+      - zabbix_net      
+    restart: unless-stopped
+
+  # --- Zabbix Server 7.0 ---
+  zabbix_server:
+    image: zabbix/zabbix-server-mysql:7.0-ubuntu-latest
+    platform: linux/arm64
+    container_name: zabbix_server
+    environment:
+      DB_SERVER_HOST: zabbix_db
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      ZBX_STARTPINGERS: 10
+    depends_on:
+      zabbix_db:
+        condition: service_healthy
+    ports:
+      - "10051:10051"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./data/zabbix-server/alertscripts:/usr/lib/zabbix/alertscripts:ro
+      - ./data/zabbix-server/externalscripts:/usr/lib/zabbix/externalscripts:ro
+    networks:
+      # - dc-aaa.lv
+      - zabbix_net  
+    restart: unless-stopped
+
+  # --- Zabbix Web Interface 7.0 ---
+  zabbix_web:
+    image: zabbix/zabbix-web-nginx-mysql:7.0-ubuntu-latest
+    platform: linux/arm64
+    container_name: zabbix_web
+    environment:
+      DB_SERVER_HOST: zabbix_db
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix_server
+      ZBX_SERVER_NAME: Zabbix on dc-aaa.lv
+      PHP_TZ: Europe/Riga
+    depends_on:
+      - zabbix_server
+    ports:
+      - "8080:8080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./data/zabbix-web/modules:/usr/share/zabbix/modules:ro
+    networks:
+      # - dc-aaa.lv
+      - zabbix_net       
+    restart: unless-stopped
+
+volumes:
+  zabbix_db_data:
 
 networks:
-  dc_aaa:
-    ipam:
-      config:
-        - subnet: ${DC_AAA_SUBNET}
-
-  dc_zzz:
-    ipam:
-      config:
-        - subnet: ${DC_ZZZ_SUBNET}
+  dc-aaa.lv:
+    driver: bridge
+  dc-zzz.lv:
+    driver: bridge
+  zabbix_net:  
+    driver: bridge

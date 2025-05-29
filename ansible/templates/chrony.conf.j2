@@ -1,0 +1,20 @@
+# chrony configuration for {{ inventory_hostname }}
+
+driftfile /var/lib/chrony/chrony.drift
+
+makestep 1.0 3
+
+logdir /var/log/chrony
+
+{% if group_names | intersect(['dc_aaa']) %}
+server ntp-aaa iburst
+{% elif group_names | intersect(['dc_zzz']) %}
+server ntp-zzz iburst
+{% else %}
+# fallback NTP server
+server pool.ntp.org iburst
+{% endif %}
+
+allow
+
+local stratum 10
